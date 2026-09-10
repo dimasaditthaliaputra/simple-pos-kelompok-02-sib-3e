@@ -1,8 +1,6 @@
 ```php
 @extends('layouts.app')
-
 @section('title', 'Kasir')
-
 @section('content')
 <h1 class="text-lg font-semibold mb-4">Transaksi Kasir</h1>
 
@@ -12,7 +10,6 @@
     addToCart(id, name, price) {
         this.cart.push({ id, name, price });
     },
-
     removeFromCart(id) {
         this.cart = this.cart.filter(item => item.id !== id);
     },
@@ -36,6 +33,7 @@
     </div>
 
     <div class="mt-4 border-t pt-3">
+        <h2 class="font-semibold mb-2">Keranjang Belanja</h2>
         <template x-for="item in cart" :key="item.id">
             <div class="flex items-center justify-between mb-2">
                 <p x-text="item.name + ' - Rp ' + item.price"></p>
@@ -50,7 +48,7 @@
             </div>
         </template>
 
-        <p class="font-semibold mt-2">
+        <p class="font-semibold mt-2 border-t pt-2">
             Subtotal: Rp <span x-text="subtotal()"></span>
         </p>
     </div>
