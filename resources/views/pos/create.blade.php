@@ -1,4 +1,3 @@
-```php
 @extends('layouts.app')
 @section('title', 'Kasir')
 @section('content')
@@ -24,7 +23,17 @@
             class="border rounded-md p-3 cursor-pointer"
             @click="addToCart({{ $product->id }}, '{{ $product->name }}', {{ $product->price }})"
         >
-            <p class="font-medium">{{ $product->name }}</p>
+            <div class="flex items-center justify-between">
+                <p class="font-medium">{{ $product->name }}</p>
+                
+                {{-- TAMBAHKAN BADGE DI SINI --}}
+                @if ($product->stock < 10)
+                    <span class="bg-amber-100 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded">
+                        Stok Menipis
+                    </span>
+                @endif
+            </div>
+
             <p class="text-sm text-slate-500">
                 Rp {{ number_format($product->price) }}
             </p>
@@ -54,4 +63,3 @@
     </div>
 </div>
 @endsection
-```
