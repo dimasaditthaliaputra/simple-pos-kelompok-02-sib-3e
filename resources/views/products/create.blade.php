@@ -8,14 +8,10 @@
             <h1 class="text-xl font-bold text-gray-800">Tambah Produk Baru</h1>
             <p class="text-sm text-gray-500 mt-1">Silakan lengkapi detail informasi produk di bawah ini.</p>
         </div>
-
-        {{-- Body Form --}}
         <div class="p-6">
             <form method="POST" action="{{ route('products.store') }}">
                 @csrf
                 <div class="space-y-5">
-                    
-                    {{-- Input Nama --}}
                     <label class="block">
                         <span class="text-sm font-semibold text-gray-700">Nama Produk</span>
                         <input type="text" name="name" value="{{ old('name') }}" 
@@ -28,8 +24,6 @@
                             </p>
                         @enderror
                     </label>
-
-                    {{-- Input Kategori --}}
                     <label class="block">
                         <span class="text-sm font-semibold text-gray-700">Kategori</span>
                         <select name="category_id" 
@@ -46,8 +40,6 @@
                             </p>
                         @enderror
                     </label>
-
-                    {{-- Grid 2 Kolom untuk Harga & Stok --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         {{-- Input Harga --}}
                         <label class="block">
@@ -62,8 +54,6 @@
                                 </p>
                             @enderror
                         </label>
-
-                        {{-- Input Stok --}}
                         <label class="block">
                             <span class="text-sm font-semibold text-gray-700">Jumlah Stok</span>
                             <input type="number" name="stock" value="{{ old('stock') }}" 
@@ -78,8 +68,6 @@
                         </label>
                     </div>
                 </div>
-
-                {{-- Action Buttons --}}
                 <div class="mt-8 flex items-center justify-end gap-3 pt-5 border-t border-gray-100">
                     <a href="{{ route('products.index') }}" 
                         class="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-4 focus:ring-gray-100 transition-colors">

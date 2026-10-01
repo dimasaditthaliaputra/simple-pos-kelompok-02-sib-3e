@@ -21,14 +21,23 @@ class TransactionController extends Controller
     {
         $validated = $request->validated();
 
+        // Validasi stok mencukupi
+        foreach ($validated['items'] as $item) {
+            $product = Product::findOrFail($item['product_id']);
+            if ($item['qty'] > $product->stock) {
+                return back()->withErrors([
+                    'items' => "Stok produk {$product->name} tidak mencukupi (Sisa: {$product->stock})."
+                ])->withInput();
+            }
+        }
+
         DB::transaction(function () use ($validated) {
             $transaction = Transaction::create([
-                'user_id' => 1, // sementara di-hardcode, belum ada login sungguhan sampai Pertemuan 7
+                'user_id' => 1,
                 'total' => 0,
             ]);
 
             $total = 0;
-
             foreach ($validated['items'] as $item) {
                 $product = Product::findOrFail($item['product_id']);
                 $subtotal = $product->price * $item['qty'];
