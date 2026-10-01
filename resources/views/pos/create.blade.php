@@ -18,10 +18,15 @@
     <form method="POST" action="{{ route('transactions.store') }}" x-data="{
         cart: [],
         addToCart(id, name, price) {
-            this.cart.push({ id, name, price });
+            const item = this.cart.find(i => i.id === id);
+            if (item) {
+                item.qty++;
+            } else {
+                this.cart.push({ id, name, price, qty: 1 });
+            }
         },
         subtotal() {
-            return this.cart.reduce((sum, item) => sum + item.price, 0);
+            return this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
         }
     }">
         @csrf
@@ -35,11 +40,11 @@
             @endforeach
         </div>
         <div class="mt-4 border-t pt-3">
-            <template x-for="(item, index) in cart" :key="index">
+            <template x-for="(item, index) in cart" :key="item.id">
                 <div>
-                    <p x-text="item.name + ' - Rp ' + item.price"></p>
+                    <p x-text="item.name + ' (x' + item.qty + ') - Rp ' + (item.price * item.qty)"></p>
                     <input type="hidden" :name="'items[' + index + '][product_id]'" :value="item.id">
-                    <input type="hidden" :name="'items[' + index + '][qty]'" value="1">
+                    <input type="hidden" :name="'items[' + index + '][qty]'" :value="item.qty">
                 </div>
             </template>
             <p class="font-semibold mt-2">Subtotal: Rp <span x-text="subtotal()"></span></p>
