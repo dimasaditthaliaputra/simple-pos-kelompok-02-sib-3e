@@ -26,12 +26,16 @@ class ProductController extends Controller
 
     public function create()
     {
-        return 'Form tambah produk (belum dibuat)';
+        $categories = Category::orderBy('name')->get();
+        return view('products.create', compact('categories'));
     }
 
-    public function store()
+    public function store(StoreProductRequest $request)
     {
-        return 'Produk disimpan (belum ada logika penyimpanan)';
+        Product::create($request->validated());
+        return redirect()
+            ->route('products.index')
+            ->with('success', 'Produk berhasil ditambahkan.');
     }
 
     public function edit(string $id)
