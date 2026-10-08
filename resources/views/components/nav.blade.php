@@ -1,14 +1,14 @@
-<nav class="bg-slate-900 text-white px-6 py-4 flex items-center gap-6 shadow-md">
-    <span class="font-bold text-lg tracking-wide">Simple POS</span>
-    <div class="flex items-center gap-4">
-        <a href="{{ route('pos.create') }}" 
-           class="px-3 py-1.5 rounded-md transition-colors {{ request()->routeIs('pos.create') ? 'bg-blue-600 text-white font-medium shadow' : 'text-slate-300 hover:text-white hover:bg-slate-800' }}">
-           Kasir
-        </a>
-        <a href="{{ route('transactions.index') }}" 
-           class="px-3 py-1.5 rounded-md transition-colors {{ request()->routeIs('transactions.index') ? 'bg-blue-600 text-white font-medium shadow' : 'text-slate-300 hover:text-white hover:bg-slate-800' }}">
-           Transaksi
-        </a>
+<nav class="bg-slate-900 text-white px-4 py-3 flex gap-4 items-center">
+    <span class="font-semibold">Simple POS</span>
+    <a href="{{ route('pos.create') }}" class="hover:underline">Kasir</a>
+    <a href="{{ route('transactions.index') }}" class="hover:underline">Transaksi</a>
+    @if (auth()->user()?->isAdmin())
         <a href="{{ route('products.index') }}" class="hover:underline">Produk</a>
-    </div>
+        <a href="{{ route('categories.index') }}" class="hover:underline">Kategori</a>
+    @endif
+    <span class="ml-auto text-sm">{{ auth()->user()?->name }} ({{ auth()->user()?->role }})</span>
+    <form method="POST" action="{{ route('logout') }}">
+        @csrf
+        <button class="hover:underline">Keluar</button>
+    </form>
 </nav>
