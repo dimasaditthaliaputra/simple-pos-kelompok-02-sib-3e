@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureUserHasRole
 {
-    public function handle(Request $request, Closure $next, string ...$roles): Response
+     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         $allowedRoles = [];
         foreach ($roles as $role) {
