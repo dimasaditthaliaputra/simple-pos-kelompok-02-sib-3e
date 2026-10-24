@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ProcessProductImport;
 use App\Exports\SalesReportExport;
-use App\Models\Product;
 use App\Models\Transaction;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -39,9 +38,16 @@ class ReportController extends Controller
         return response()->streamDownload(function () use ($query) {
             $out = fopen('php://output', 'w');
             fputcsv($out, ['ID', 'Tanggal', 'Kasir', 'Total']);
+
             foreach ($query->lazyById() as $t) {
-                fputcsv($out, [$t->id, $t->created_at, $t->user->name, $t->total]);
+                fputcsv($out, [
+                    $t->id,
+                    $t->created_at,
+                    $t->user->name,
+                    $t->total,
+                ]);
             }
+
             fclose($out);
         }, 'laporan-penjualan.csv');
     }
@@ -51,7 +57,9 @@ class ReportController extends Controller
         [$from, $to] = $this->resolveDateRange($request);
 
         return Excel::download(
-            new SalesReportExport($this->filteredQuery($from, $to)),
+            new SalesReportExport(
+                $this->filteredQuery($from, $to)
+            ),
             'laporan-penjualan.xlsx',
         );
     }
@@ -63,7 +71,10 @@ class ReportController extends Controller
         $pdf = Pdf::loadView('reports.pdf', [
             'totalPenjualan' => $this->filteredQuery($from, $to)->sum('total'),
             'jumlahTransaksi' => $this->filteredQuery($from, $to)->count(),
-            'transactions' => $this->filteredQuery($from, $to)->latest()->limit(50)->get(),
+            'transactions' => $this->filteredQuery($from, $to)
+                ->latest()
+                ->limit(50)
+                ->get(),
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
         ]);
@@ -82,43 +93,23 @@ class ReportController extends Controller
             'csv' => ['required', 'file', 'mimes:csv,txt'],
         ]);
 
-        $lines = file($request->file('csv')->getRealPath(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $rows = array_map('str_getcsv', $lines);
-        $header = array_shift($rows);
+        $path = $request->file('csv')->store('imports');
 
-        $created = 0;
-        $updated = 0;
-        foreach ($rows as $row) {
-            if (count($row) !== count($header)) {
-                continue;
-            }
+        ProcessProductImport::dispatch($path);
 
-            $validator = Validator::make(array_combine($header, $row), [
-                'name' => ['required', 'string'],
-                'category_id' => ['required', 'exists:categories,id'],
-                'price' => ['required', 'integer', 'min:0'],
-            ]);
-
-            if ($validator->fails()) {
-                continue;
-            }
-
-            $data = $validator->validated();
-            $product = Product::updateOrCreate(
-                ['name' => $data['name'], 'category_id' => $data['category_id']],
-                ['price' => $data['price']],
-            );
-
-            $product->wasRecentlyCreated ? $created++ : $updated++;
-        }
-
-        return back()->with('success', "{$created} produk baru, {$updated} diperbarui.");
+        return back()->with(
+            'success',
+            'Import sedang diproses di background.'
+        );
     }
 
     private function resolveDateRange(Request $request): array
     {
-        $from = $request->date('from')?->startOfDay() ?? now()->startOfMonth();
-        $to = $request->date('to')?->endOfDay() ?? now()->endOfDay();
+        $from = $request->date('from')?->startOfDay()
+            ?? now()->startOfMonth();
+
+        $to = $request->date('to')?->endOfDay()
+            ?? now()->endOfDay();
 
         return [$from, $to];
     }
