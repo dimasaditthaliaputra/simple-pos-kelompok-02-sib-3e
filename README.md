@@ -85,3 +85,36 @@ Berikut adalah skenario pengujian manual untuk setiap peran yang ada pada aplika
 **Hasil yang Diharapkan:**
 - Setiap upaya mengakses halaman `/pos`, `/transactions`, `/products`, maupun `/categories` akan secara otomatis dialihkan (*redirect*) ke halaman `/login`.
 - Halaman publik seperti `/info` dan `/login` dapat diakses dengan sukses tanpa hambatan autentikasi.
+
+---
+
+## Langkah 6: Pemilihan Format Ekspor untuk 100.000 Transaksi
+
+### Pertanyaan:
+> Untuk laporan 100.000 transaksi, format mana yang kalian pilih (CSV, Excel, atau PDF), dan kenapa?
+
+### Jawaban:
+Untuk menangani ekspor data laporan skala besar sebanyak **100.000 transaksi**, format yang kami pilih adalah **CSV (Comma-Separated Values)**.
+
+### Alasan Pemilihan:
+
+1. **Efisiensi Penggunaan Memori (Memory Streaming & Footprint O(1)):**
+   * Ekspor CSV dapat memanfaatkan fitur streaming Laravel (`response()->streamDownload()`) dipadukan dengan generator Eloquent seperti `Transaction::lazyById()`.
+   * Data dibaca dari database secara bertahap dalam potongan (*chunk*) kecil dan langsung ditulis baris per baris ke aliran output (`php://output`).
+   * Server **tidak perlu** menampung 100.000 objek model sekaligus di memori RAM, sehingga konsumsi memori puncak (*peak memory*) tetap sangat rendah dan stabil, terhindar dari *fatal error* `Allowed memory size exhausted`.
+
+2. **Performa Kecepatan Tinggi & Mencegah Request Timeout:**
+   * CSV adalah format teks murni (*plain text*) tanpa *overhead* struktur XML, zip packaging, atau styling.
+   * Proses unduh (*download*) ke peramban pengguna dapat dimulai seketika (*Time-to-First-Byte* sangat cepat) tanpa harus menunggu seluruh 100.000 data selesai dikalkulasi.
+
+3. **Keterbatasan Format PDF (DOMPDF):**
+   * DomPDF bekerja dengan membangun *DOM tree* dan menghitung tata letak (*layout*) dokumen HTML/CSS secara menyeluruh di memori.
+   * Merender 100.000 baris transaksi (yang setara dengan ribuan halaman dokumen PDF) dipastikan akan menyebabkan server kehabisan memori atau mengalami *execution timeout*. Karena itulah pada implementasi PDF aplikasi ini, tabel rincian transaksi dibatasi secara sengaja (`limit(50)`) hanya untuk ringkasan.
+
+4. **Keterbatasan Format Excel (.xlsx):**
+   * Format Excel XLSX berbasis file XML terkompresi (ZIP). Library spreadsheet seperti PhpSpreadsheet / Laravel Excel harus memetakan setiap sel menjadi objek di memori.
+   * Mengolah 100.000 baris x beberapa kolom membutuhkan alokasi memori yang sangat besar (ratusan MB hingga GB) dan beban CPU yang berat, sehingga kurang aman dilakukan secara *synchronous* tanpa antrean (*queue job*).
+
+5. **Kemudahan Analisis Data:**
+   * File CSV merupakan format universal standar industri yang tetap dapat dibuka langsung dengan Microsoft Excel / Google Sheets, serta sangat mudah diimpor ke sistem analisis data lain (*data warehouse*, database, Python/Pandas).
+
