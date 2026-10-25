@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\ProcessProductImport;
 use App\Exports\SalesReportExport;
+use App\Jobs\ProcessProductImport;
+use App\Models\Category;
 use App\Models\Transaction;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,20 +21,24 @@ class ReportController extends Controller
     public function index(Request $request): View
     {
         [$from, $to] = $this->resolveDateRange($request);
-        $query = $this->filteredQuery($from, $to);
+        $categoryId = $request->filled('category_id') ? (int) $request->input('category_id') : null;
+        $query = $this->filteredQuery($from, $to, $categoryId);
 
         return view('reports.index', [
             'totalPenjualan' => $query->sum('total'),
             'jumlahTransaksi' => $query->count(),
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
+            'categoryId' => $categoryId,
+            'categories' => Category::orderByRaw("CASE WHEN name = 'Lainnya' THEN 1 ELSE 0 END, id ASC")->get(),
         ]);
     }
 
     public function exportCsv(Request $request): StreamedResponse
     {
         [$from, $to] = $this->resolveDateRange($request);
-        $query = $this->filteredQuery($from, $to);
+        $categoryId = $request->filled('category_id') ? (int) $request->input('category_id') : null;
+        $query = $this->filteredQuery($from, $to, $categoryId);
 
         return response()->streamDownload(function () use ($query) {
             $out = fopen('php://output', 'w');
@@ -55,10 +60,11 @@ class ReportController extends Controller
     public function exportExcel(Request $request): BinaryFileResponse
     {
         [$from, $to] = $this->resolveDateRange($request);
+        $categoryId = $request->filled('category_id') ? (int) $request->input('category_id') : null;
 
         return Excel::download(
             new SalesReportExport(
-                $this->filteredQuery($from, $to)
+                $this->filteredQuery($from, $to, $categoryId)
             ),
             'laporan-penjualan.xlsx',
         );
@@ -67,11 +73,12 @@ class ReportController extends Controller
     public function exportPdf(Request $request): Response
     {
         [$from, $to] = $this->resolveDateRange($request);
+        $categoryId = $request->filled('category_id') ? (int) $request->input('category_id') : null;
 
         $pdf = Pdf::loadView('reports.pdf', [
-            'totalPenjualan' => $this->filteredQuery($from, $to)->sum('total'),
-            'jumlahTransaksi' => $this->filteredQuery($from, $to)->count(),
-            'transactions' => $this->filteredQuery($from, $to)
+            'totalPenjualan' => $this->filteredQuery($from, $to, $categoryId)->sum('total'),
+            'jumlahTransaksi' => $this->filteredQuery($from, $to, $categoryId)->count(),
+            'transactions' => $this->filteredQuery($from, $to, $categoryId)
                 ->latest()
                 ->limit(50)
                 ->get(),
@@ -114,9 +121,14 @@ class ReportController extends Controller
         return [$from, $to];
     }
 
-    private function filteredQuery($from, $to): Builder
+    private function filteredQuery($from, $to, ?int $categoryId = null): Builder
     {
         return Transaction::with('user')
-            ->whereBetween('created_at', [$from, $to]);
+            ->whereBetween('created_at', [$from, $to])
+            ->when($categoryId, function (Builder $query, int $categoryId) {
+                $query->whereHas('details.product', function (Builder $q) use ($categoryId) {
+                    $q->where('category_id', $categoryId);
+                });
+            });
     }
 }

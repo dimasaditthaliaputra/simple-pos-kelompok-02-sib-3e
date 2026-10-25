@@ -15,18 +15,29 @@ use Illuminate\View\View;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request): View
     {
-        $products = Product::with('category')
-            ->orderBy('name')
-            ->paginate(10);
+        $q = trim((string) $request->string('q'));
 
-        return view('products.index', compact('products'));
+        $products = Product::with('category')
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('name', 'like', "%{$q}%")
+                        ->orWhereHas('category', function ($catQuery) use ($q) {
+                            $catQuery->where('name', 'like', "%{$q}%");
+                        });
+                });
+            })
+            ->orderBy('name')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('products.index', compact('products', 'q'));
     }
 
     public function create()
     {
-        $categories = Category::orderBy('name')->get();
+        $categories = Category::orderByRaw("CASE WHEN name = 'Lainnya' THEN 1 ELSE 0 END, id ASC")->get();
         return view('products.create', compact('categories'));
     }
 
@@ -40,7 +51,7 @@ class ProductController extends Controller
 
     public function edit(Product $product)
     {
-        $categories = Category::orderBy('name')->get();
+        $categories = Category::orderByRaw("CASE WHEN name = 'Lainnya' THEN 1 ELSE 0 END, id ASC")->get();
         return view('products.edit', compact('product', 'categories'));
     }
 
