@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\SalesReportExport;
 use App\Jobs\ProcessProductImport;
 use App\Models\Category;
+use App\Models\ProductImport;
 use App\Models\Transaction;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -91,18 +92,27 @@ class ReportController extends Controller
 
     public function importForm(): View
     {
-        return view('reports.import');
+        return view('reports.import', [
+            'imports' => ProductImport::withCount('errors')->latest()->take(5)->get(),
+            'latest' => ProductImport::with('errors')->latest()->first(),
+        ]);
     }
 
     public function import(Request $request): RedirectResponse
     {
         $request->validate([
             'csv' => ['required', 'file', 'mimes:csv,txt'],
+            'driver' => ['required', 'in:manual,excel'],
         ]);
 
-        $path = $request->file('csv')->store('imports');
+        $file = $request->file('csv');
 
-        ProcessProductImport::dispatch($path);
+        $import = ProductImport::create([
+            'filename' => $file->getClientOriginalName(),
+            'driver' => $request->input('driver'),
+        ]);
+
+        ProcessProductImport::dispatch($file->store('imports'), $import);
 
         return back()->with(
             'success',
