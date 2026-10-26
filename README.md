@@ -118,3 +118,26 @@ Untuk menangani ekspor data laporan skala besar sebanyak **100.000 transaksi**, 
 5. **Kemudahan Analisis Data:**
    * File CSV merupakan format universal standar industri yang tetap dapat dibuka langsung dengan Microsoft Excel / Google Sheets, serta sangat mudah diimpor ke sistem analisis data lain (*data warehouse*, database, Python/Pandas).
 
+---
+
+## Langkah 10: Identifikasi Proses Lain yang Layak Menggunakan Queued Job
+
+### Proses: Export Laporan Penjualan ke PDF
+
+Proses lain pada aplikasi Simple POS yang layak dipindahkan ke queued job adalah proses ekspor laporan penjualan ke format PDF.
+
+### Alasan Pemilihan
+
+1. **Mengurangi waktu tunggu pengguna.** Pembuatan laporan PDF membutuhkan proses pengambilan dan pengolahan data transaksi. Jika jumlah transaksi semakin banyak, proses tersebut dapat membutuhkan waktu lebih lama.
+
+2. **Menjaga responsivitas aplikasi.** Dengan queued job, pembuatan file PDF dapat dilakukan di latar belakang (*background*), sehingga aplikasi tidak harus menunggu seluruh proses selesai dalam satu permintaan.
+
+3. **Mendukung proses retry.** Jika pembuatan laporan gagal karena gangguan sementara, queued job dapat dikonfigurasi untuk mencoba menjalankan proses kembali sesuai jumlah percobaan dan jeda yang ditentukan.
+
+4. **Mempermudah pengelolaan laporan berukuran besar.** Proses pembuatan laporan dapat dijalankan oleh worker secara terpisah dari permintaan pengguna, sehingga lebih mudah dipantau dan dikelola.
+
+### Gambaran Implementasi
+
+Ketika pengguna meminta ekspor laporan penjualan ke PDF, aplikasi memasukkan permintaan tersebut ke antrean (*queue*). Selanjutnya, worker mengambil job untuk mengolah data transaksi dan membuat file PDF. Setelah selesai, file dapat disediakan untuk diunduh oleh pengguna.
+
+**Kesimpulan:** Ekspor laporan penjualan ke PDF layak dipertimbangkan untuk menggunakan queued job, terutama ketika jumlah transaksi semakin banyak dan waktu pemrosesan meningkat. Bagian ini merupakan usulan pengembangan dan bukan pernyataan bahwa proses ekspor PDF saat ini sudah menggunakan queue.
