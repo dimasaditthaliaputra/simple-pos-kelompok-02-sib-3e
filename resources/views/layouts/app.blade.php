@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <title>@yield('title', 'Simple POS')</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>@yield('title', 'Simple POS')</title> @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
     <x-nav />
