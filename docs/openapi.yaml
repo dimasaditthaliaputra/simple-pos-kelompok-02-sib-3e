@@ -36,9 +36,52 @@ paths:
       summary: Ambil daftar produk
       security:
         - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Nomor halaman
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          description: Jumlah produk per halaman (maksimum 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 15
+        - name: category_id
+          in: query
+          description: Filter berdasarkan ID kategori
+          required: false
+          schema:
+            type: integer
+        - name: q
+          in: query
+          description: Cari produk berdasarkan nama (minimal 2 karakter)
+          required: false
+          schema:
+            type: string
+            minLength: 2
+        - name: sort
+          in: query
+          description: Pengurutan data produk (gunakan awalan '-' untuk urutan menurun/descending)
+          required: false
+          schema:
+            type: string
+            enum:
+              - name
+              - '-name'
+              - price
+              - '-price'
+            default: name
       responses:
         '200':
-          description: Daftar produk
+          description: Daftar produk berpaginasi
           content:
             application/json:
               schema:
@@ -53,8 +96,34 @@ paths:
                         name: { type: string }
                         price: { type: integer }
                         category: { type: string }
+                  links:
+                    type: object
+                    properties:
+                      first: { type: string, nullable: true }
+                      last: { type: string, nullable: true }
+                      prev: { type: string, nullable: true }
+                      next: { type: string, nullable: true }
+                  meta:
+                    type: object
+                    properties:
+                      current_page: { type: integer }
+                      from: { type: integer, nullable: true }
+                      last_page: { type: integer }
+                      path: { type: string }
+                      per_page: { type: integer }
+                      to: { type: integer, nullable: true }
+                      total: { type: integer }
         '401':
           description: Token tidak ada atau tidak valid
+        '422':
+          description: Parameter query tidak valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  errors: { type: object }
   /api/transactions:
     post:
       summary: Buat transaksi baru
@@ -95,4 +164,3 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-
