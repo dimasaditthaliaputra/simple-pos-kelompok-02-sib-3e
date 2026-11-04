@@ -1,3 +1,15 @@
+# Perbandingan pengalaman: Postman vs curl
+# Saat menguji tiga endpoint (login, products, transactions) memakai Postman,
+# base URL dan token cukup disimpan sekali sebagai variabel environment, lalu
+# header Authorization terpasang otomatis lewat {{token}} di setiap request,
+# sedangkan di curl semua -H dan -d harus diketik ulang pada tiap perintah.
+# Respons JSON di Postman tampil rapi, status code dan waktu responsnya jelas,
+# dan request bisa disimpan lalu diulang dengan satu klik, sehingga uji
+# idempotency (kirim ulang dengan key yang sama) jauh lebih cepat. Curl tetap
+# unggul untuk percobaan singkat di terminal, mudah disalin ke dokumentasi atau
+# skrip, dan tidak butuh aplikasi tambahan, tetapi tidak menyimpan riwayat dan
+# keluarannya mentah sehingga lebih sulit dibaca.
+
 openapi: 3.0.0
 info:
   title: Simple POS API
