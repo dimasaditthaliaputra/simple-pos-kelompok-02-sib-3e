@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\IdempotencyKey;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\User;
@@ -183,5 +184,35 @@ class ApiTransactionTest extends TestCase
             Carbon::setTestNow();
             Auth::forgetGuards();
         }
+    }
+
+    public function test_old_idempotency_keys_are_pruned(): void
+    {
+        $user = User::factory()->create();
+
+        $oldKey = IdempotencyKey::forceCreate([
+            'user_id' => $user->id,
+            'key' => 'key-lama',
+            'request_hash' => hash('sha256', '{}'),
+            'response_status' => 201,
+            'response_body' => '{"data":{"id":1}}',
+            'created_at' => now()->subHours(25),
+            'updated_at' => now()->subHours(25),
+        ]);
+
+        $freshKey = IdempotencyKey::forceCreate([
+            'user_id' => $user->id,
+            'key' => 'key-baru',
+            'request_hash' => hash('sha256', '{}'),
+            'response_status' => 201,
+            'response_body' => '{"data":{"id":2}}',
+            'created_at' => now()->subHours(2),
+            'updated_at' => now()->subHours(2),
+        ]);
+
+        $this->artisan('model:prune')->assertSuccessful();
+
+        $this->assertDatabaseMissing('idempotency_keys', ['id' => $oldKey->id]);
+        $this->assertDatabaseHas('idempotency_keys', ['id' => $freshKey->id]);
     }
 }

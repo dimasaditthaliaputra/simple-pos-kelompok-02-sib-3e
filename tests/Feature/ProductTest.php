@@ -4,12 +4,19 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ProductTest extends TestCase
 {
     use RefreshDatabase;
+
+    private function admin(): User
+    {
+        return User::factory()->create(['role' => 'admin']);
+    }
+
     public function test_can_view_edit_product_page(): void
     {
         $category = new Category();
@@ -23,7 +30,7 @@ class ProductTest extends TestCase
             'stock' => 10,
         ]);
 
-        $response = $this->get(route('products.edit', $product));
+        $response = $this->actingAs($this->admin())->get(route('products.edit', $product));
 
         $response->assertStatus(200);
         $response->assertViewIs('products.edit');
@@ -46,7 +53,8 @@ class ProductTest extends TestCase
             'stock' => 10,
         ]);
 
-        $response = $this->from(route('products.edit', $product))
+        $response = $this->actingAs($this->admin())
+            ->from(route('products.edit', $product))
             ->put(route('products.update', $product), [
                 'name' => '',
                 'category_id' => 999999,
@@ -71,12 +79,13 @@ class ProductTest extends TestCase
             'stock' => 15,
         ]);
 
-        $response = $this->put(route('products.update', $product), [
-            'name' => 'Updated Name',
-            'category_id' => $category->id,
-            'price' => 25000,
-            'stock' => 30,
-        ]);
+        $response = $this->actingAs($this->admin())
+            ->put(route('products.update', $product), [
+                'name' => 'Updated Name',
+                'category_id' => $category->id,
+                'price' => 25000,
+                'stock' => 30,
+            ]);
 
         $response->assertRedirect(route('products.index'));
         $response->assertSessionHas('success', 'Produk berhasil diperbarui.');

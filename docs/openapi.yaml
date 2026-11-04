@@ -4,7 +4,7 @@ info:
   version: 1.0.0
 
 servers:
-  - url: http://127.0.0.1:8081
+  - url: http://127.0.0.1:8000
 
 paths:
   /api/v1/login:
@@ -100,6 +100,13 @@ paths:
       summary: Buat transaksi baru
       security:
         - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            maxLength: 64
       requestBody:
         required: true
         content:
@@ -119,10 +126,14 @@ paths:
       responses:
         '201':
           description: Transaksi berhasil disimpan
+        '400':
+          description: Header Idempotency-Key wajib diisi
         '401':
           description: Token tidak ada atau tidak valid
+        '409':
+          description: Request dengan key ini masih diproses
         '422':
-          description: Input tidak valid
+          description: Input tidak valid atau key dipakai untuk request lain
 
   /api/v1/transactions/{transaction}:
     get:
