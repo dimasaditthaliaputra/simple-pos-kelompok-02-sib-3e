@@ -6,6 +6,8 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\User;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -39,7 +41,7 @@ class ApiTransactionTest extends TestCase
 
     public function test_guest_cannot_create_transaction(): void
     {
-        $this->postJson('/api/transactions', $this->payload())
+        $this->postJson('/api/v1/transactions', $this->payload())
             ->assertUnauthorized();
     }
 
@@ -51,7 +53,7 @@ class ApiTransactionTest extends TestCase
         );
 
         $this->postJson(
-            '/api/transactions',
+            '/api/v1/transactions',
             $this->payload(),
             ['Idempotency-Key' => 'k1']
         )->assertForbidden();
@@ -65,7 +67,7 @@ class ApiTransactionTest extends TestCase
         );
 
         $this->postJson(
-            '/api/transactions',
+            '/api/v1/transactions',
             [
                 'items' => [
                     ['product_id' => 99999, 'qty' => 1],
@@ -88,7 +90,7 @@ class ApiTransactionTest extends TestCase
         $headers = ['Idempotency-Key' => 'k3'];
 
         $first = $this->postJson(
-            '/api/transactions',
+            '/api/v1/transactions',
             $payload,
             $headers
         )
@@ -96,7 +98,7 @@ class ApiTransactionTest extends TestCase
             ->assertJsonPath('data.total', 30000);
 
         $this->postJson(
-            '/api/transactions',
+            '/api/v1/transactions',
             $payload,
             $headers
         )
@@ -122,7 +124,7 @@ class ApiTransactionTest extends TestCase
         );
 
         $this->getJson(
-            "/api/transactions/{$transaction->id}"
+            "/api/v1/transactions/{$transaction->id}"
         )->assertForbidden();
 
         Sanctum::actingAs(
@@ -131,9 +133,55 @@ class ApiTransactionTest extends TestCase
         );
 
         $this->getJson(
-            "/api/transactions/{$transaction->id}"
+            "/api/v1/transactions/{$transaction->id}"
         )
             ->assertOk()
             ->assertJsonPath('data.id', $transaction->id);
+    }
+
+    public function test_expired_token_cannot_access_api(): void
+    {
+        $user = User::factory()->create();
+
+        // Pastikan user dapat diautentikasi menggunakan Sanctum.
+        Sanctum::actingAs($user, ['transactions:create']);
+
+        $this->assertAuthenticatedAs($user, 'sanctum');
+
+        // Hapus autentikasi sementara agar request berikutnya
+        // benar-benar memeriksa Bearer token.
+        Auth::forgetGuards();
+
+        // Atur waktu awal pengujian.
+        $issuedAt = Carbon::parse('2026-11-04 10:00:00');
+        Carbon::setTestNow($issuedAt);
+
+        try {
+            // Buat token yang hanya berlaku selama satu menit.
+            $token = $user->createToken(
+                'expired-test',
+                ['transactions:create'],
+                $issuedAt->copy()->addMinute()
+            );
+
+            // Majukan waktu hingga token kedaluwarsa.
+            Carbon::setTestNow($issuedAt->copy()->addMinutes(2));
+
+            // Pastikan token sudah melewati waktu kedaluwarsa.
+            $this->assertTrue(
+                $token->accessToken->expires_at->isPast()
+            );
+
+            // Token kedaluwarsa harus ditolak oleh API.
+            $this->postJson(
+                '/api/v1/transactions',
+                ['items' => []],
+                ['Authorization' => 'Bearer '.$token->plainTextToken]
+            )->assertUnauthorized();
+        } finally {
+            // Kembalikan waktu pengujian seperti semula.
+            Carbon::setTestNow();
+            Auth::forgetGuards();
+        }
     }
 }
