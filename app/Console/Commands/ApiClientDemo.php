@@ -29,7 +29,7 @@ class ApiClientDemo extends Command
      */
     public function handle(): int
     {
-        $baseUrl = 'http://127.0.0.1:8081';
+        $baseUrl = env('API_BASE_URL', 'http://127.0.0.1:8000');
 
         // klien yang baik mengulang hanya error yang memang layak diulang, dengan jeda yang makin panjang
         $when = fn ($e) => $e instanceof ConnectionException
